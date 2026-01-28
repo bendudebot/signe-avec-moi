@@ -305,8 +305,23 @@ function Mascot({ celebrating }) {
 
 // Carte du signe
 function SignCard({ sign }) {
+  const [showVideo, setShowVideo] = useState(false);
+
   useEffect(() => {
-    setTimeout(() => speak(sign.word), 500);
+    // Reset quand le signe change
+    setShowVideo(false);
+    
+    // D'abord dire le mot
+    setTimeout(() => {
+      speak(sign.word);
+    }, 300);
+    
+    // Puis lancer la vidéo après 1.5s
+    const timer = setTimeout(() => {
+      setShowVideo(true);
+    }, 1500);
+    
+    return () => clearTimeout(timer);
   }, [sign.word]);
 
   return (
@@ -318,8 +333,8 @@ function SignCard({ sign }) {
       </div>
       <p className="sign-desc">{sign.description}</p>
       
-      {sign.youtubeId && (
-        <div className="video-container">
+      <div className="video-container">
+        {sign.youtubeId && showVideo ? (
           <iframe
             src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=1&loop=1&playlist=${sign.youtubeId}&rel=0&modestbranding=1`}
             title={`Signe: ${sign.word}`}
@@ -327,8 +342,13 @@ function SignCard({ sign }) {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
           />
-        </div>
-      )}
+        ) : (
+          <div className="video-loading">
+            <span>🎬</span>
+            <p>Écoute bien...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -622,7 +642,7 @@ const styles = `
     border-radius: 12px;
     overflow: hidden;
     min-height: 0;
-    background: #000;
+    background: #2d3436;
   }
   .video-container iframe {
     position: absolute;
@@ -630,6 +650,24 @@ const styles = `
     width: 100%;
     height: 100%;
   }
+  .video-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+  .video-loading span {
+    font-size: 4rem;
+    animation: pulse 1s ease infinite;
+  }
+  .video-loading p {
+    font-size: 1.2rem;
+    margin-top: 10px;
+  }
+  @keyframes pulse { 50% { transform: scale(1.1); } }
   
   .webcam-container {
     background: white;
