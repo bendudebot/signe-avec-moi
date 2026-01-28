@@ -152,7 +152,7 @@ function SignCard({ sign }) {
       {sign.youtubeId ? (
         <div className="video-container">
           <iframe
-            src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=0&rel=0&modestbranding=1`}
+            src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=1&mute=1&loop=1&playlist=${sign.youtubeId}&rel=0&modestbranding=1`}
             title={`Signe: ${sign.word}`}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
