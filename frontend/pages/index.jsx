@@ -59,18 +59,30 @@ function Mascot({ celebrating }) {
   );
 }
 
-// Carte du signe
+// Carte du signe avec vidéo YouTube
 function SignCard({ sign }) {
   return (
-    <div className="sign-card wiggle">
+    <div className="sign-card">
       <div className="sign-emoji-big">{sign.emoji}</div>
       <h2 className="sign-word">{sign.word}</h2>
       <p className="sign-desc">{sign.description}</p>
       
-      <div className="video-placeholder">
-        <span>🎬</span>
-        <p>Vidéo bientôt!</p>
-      </div>
+      {sign.youtubeId ? (
+        <div className="video-container">
+          <iframe
+            src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=0&rel=0`}
+            title={`Signe: ${sign.word}`}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <div className="video-placeholder">
+          <span>🎬</span>
+          <p>Vidéo bientôt!</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -322,6 +334,22 @@ export default function Home() {
         .sign-emoji-big { font-size: 6rem; margin-bottom: 10px; }
         .sign-word { font-size: 3rem; color: #e17055; margin-bottom: 10px; }
         .sign-desc { font-size: 1.2rem; color: #636e72; margin-bottom: 20px; }
+        .video-container {
+          position: relative;
+          width: 100%;
+          padding-bottom: 56.25%; /* 16:9 */
+          border-radius: 15px;
+          overflow: hidden;
+          box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .video-container iframe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          border-radius: 15px;
+        }
         .video-placeholder {
           background: #dfe6e9;
           border-radius: 15px;

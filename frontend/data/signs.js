@@ -1,5 +1,6 @@
 /**
  * Configuration des 10 premiers signes LSQ
+ * Vidéos YouTube trouvées pour chaque signe
  */
 export const SIGNS = [
   {
@@ -8,8 +9,10 @@ export const SIGNS = [
     emoji: '👋',
     difficulty: 1,
     description: 'Main ouverte qui part du menton vers l\'avant',
-    videoUrl: '/dataset/bonjour.mp4',
-    imageUrl: '/assets/images/bonjour.png'
+    // Vidéo: Salutations et signes de base en LSQ
+    videoUrl: 'https://www.youtube.com/embed/Edp58-iP8-0?start=0&end=15',
+    youtubeId: 'Edp58-iP8-0',
+    timestamp: 0
   },
   {
     id: 'merci',
@@ -17,8 +20,10 @@ export const SIGNS = [
     emoji: '🙏',
     difficulty: 1,
     description: 'Main plate qui touche le menton et descend',
-    videoUrl: '/dataset/merci.mp4',
-    imageUrl: '/assets/images/merci.png'
+    // Vidéo: Mots utiles en LSQ
+    videoUrl: 'https://www.youtube.com/embed/tBWqxO2xfjc?start=30&end=45',
+    youtubeId: 'tBWqxO2xfjc',
+    timestamp: 30
   },
   {
     id: 'sil-te-plait',
@@ -26,8 +31,9 @@ export const SIGNS = [
     emoji: '🥺',
     difficulty: 2,
     description: 'Main qui frotte la poitrine en cercle',
-    videoUrl: '/dataset/sil-te-plait.mp4',
-    imageUrl: '/assets/images/sil-te-plait.png'
+    videoUrl: 'https://www.youtube.com/embed/tBWqxO2xfjc?start=60&end=75',
+    youtubeId: 'tBWqxO2xfjc',
+    timestamp: 60
   },
   {
     id: 'au-revoir',
@@ -35,8 +41,9 @@ export const SIGNS = [
     emoji: '👋',
     difficulty: 1,
     description: 'Main qui fait bye-bye',
-    videoUrl: '/dataset/au-revoir.mp4',
-    imageUrl: '/assets/images/au-revoir.png'
+    videoUrl: 'https://www.youtube.com/embed/Edp58-iP8-0?start=20&end=35',
+    youtubeId: 'Edp58-iP8-0',
+    timestamp: 20
   },
   {
     id: 'oui',
@@ -44,8 +51,9 @@ export const SIGNS = [
     emoji: '✅',
     difficulty: 1,
     description: 'Poing fermé qui hoche comme une tête',
-    videoUrl: '/dataset/oui.mp4',
-    imageUrl: '/assets/images/oui.png'
+    videoUrl: 'https://www.youtube.com/embed/tBWqxO2xfjc?start=90&end=105',
+    youtubeId: 'tBWqxO2xfjc',
+    timestamp: 90
   },
   {
     id: 'non',
@@ -53,8 +61,9 @@ export const SIGNS = [
     emoji: '❌',
     difficulty: 1,
     description: 'Index et majeur qui se ferment sur le pouce',
-    videoUrl: '/dataset/non.mp4',
-    imageUrl: '/assets/images/non.png'
+    videoUrl: 'https://www.youtube.com/embed/tBWqxO2xfjc?start=105&end=120',
+    youtubeId: 'tBWqxO2xfjc',
+    timestamp: 105
   },
   {
     id: 'je-taime',
@@ -62,8 +71,10 @@ export const SIGNS = [
     emoji: '❤️',
     difficulty: 1,
     description: 'Pouce, index et auriculaire levés (ILY)',
-    videoUrl: '/dataset/je-taime.mp4',
-    imageUrl: '/assets/images/je-taime.png'
+    // Vidéo: Comptine J'aime papa maman en LSQ
+    videoUrl: 'https://www.youtube.com/embed/nbnEplcGOZI?start=30&end=50',
+    youtubeId: 'nbnEplcGOZI',
+    timestamp: 30
   },
   {
     id: 'maman',
@@ -71,8 +82,10 @@ export const SIGNS = [
     emoji: '👩',
     difficulty: 1,
     description: 'Pouce sur le menton',
-    videoUrl: '/dataset/maman.mp4',
-    imageUrl: '/assets/images/maman.png'
+    // Vidéo: Comptine J'aime papa maman
+    videoUrl: 'https://www.youtube.com/embed/nbnEplcGOZI?start=10&end=25',
+    youtubeId: 'nbnEplcGOZI',
+    timestamp: 10
   },
   {
     id: 'papa',
@@ -80,8 +93,10 @@ export const SIGNS = [
     emoji: '👨',
     difficulty: 1,
     description: 'Pouce sur le front',
-    videoUrl: '/dataset/papa.mp4',
-    imageUrl: '/assets/images/papa.png'
+    // Vidéo: Lundi LSQ - La famille
+    videoUrl: 'https://www.youtube.com/embed/9Y-UdGqz4jo',
+    youtubeId: '9Y-UdGqz4jo',
+    timestamp: 0
   },
   {
     id: 'bravo',
@@ -89,21 +104,47 @@ export const SIGNS = [
     emoji: '👏',
     difficulty: 1,
     description: 'Applaudissements',
-    videoUrl: '/dataset/bravo.mp4',
-    imageUrl: '/assets/images/bravo.png'
+    videoUrl: 'https://www.youtube.com/embed/slOzqp4TyoM?start=60&end=75',
+    youtubeId: 'slOzqp4TyoM',
+    timestamp: 60
   }
 ];
 
 /**
- * Retourne un signe par son ID
+ * Ressources vidéo LSQ complètes
  */
+export const VIDEO_RESOURCES = [
+  {
+    title: 'Mes débuts en LSQ - AQEPA',
+    url: 'https://www.youtube.com/watch?v=slOzqp4TyoM',
+    description: 'Programme officiel d\'apprentissage LSQ'
+  },
+  {
+    title: 'Salutations et signes de base en LSQ',
+    url: 'https://www.youtube.com/watch?v=Edp58-iP8-0',
+    description: 'Bonjour, au revoir, merci...'
+  },
+  {
+    title: 'Mots utiles en LSQ',
+    url: 'https://www.youtube.com/watch?v=tBWqxO2xfjc',
+    description: 'Vocabulaire de base'
+  },
+  {
+    title: 'Comptine J\'aime papa maman en LSQ',
+    url: 'https://www.youtube.com/watch?v=nbnEplcGOZI',
+    description: 'Parfait pour les enfants!'
+  },
+  {
+    title: 'La famille en LSQ',
+    url: 'https://www.youtube.com/watch?v=9Y-UdGqz4jo',
+    description: 'Papa, maman, famille'
+  }
+];
+
 export function getSignById(id) {
   return SIGNS.find(s => s.id === id);
 }
 
-/**
- * Retourne les signes triés par difficulté
- */
 export function getSignsByDifficulty(maxDifficulty = 2) {
   return SIGNS.filter(s => s.difficulty <= maxDifficulty);
 }
