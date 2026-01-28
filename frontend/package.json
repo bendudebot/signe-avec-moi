@@ -14,8 +14,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "framer-motion": "^10.16.0",
-    "@mediapipe/hands": "^0.4.0",
-    "@mediapipe/camera_utils": "^0.3.0",
+    "@mediapipe/hands": "0.4.1675469240",
+    "@mediapipe/camera_utils": "0.3.1675466862",
     "canvas-confetti": "^1.9.0"
   },
   "devDependencies": {
