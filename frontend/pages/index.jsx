@@ -299,18 +299,20 @@ export default function Home() {
       <style jsx global>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        body {
+        html, body {
           font-family: 'Comic Sans MS', 'Chalkboard', cursive, sans-serif;
           background: linear-gradient(180deg, #a8e6cf 0%, #88d8b0 50%, #7fcdbb 100%);
-          min-height: 100vh;
-          overflow-x: hidden;
+          height: 100vh;
+          overflow: hidden;
         }
         
         .game {
-          max-width: 1200px;
+          max-width: 1400px;
           margin: 0 auto;
-          padding: 20px;
-          min-height: 100vh;
+          padding: 10px 20px;
+          height: 100vh;
+          display: flex;
+          flex-direction: column;
         }
         
         .floating-stars {
@@ -331,27 +333,27 @@ export default function Home() {
           100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
         }
         
-        .header { text-align: center; margin-bottom: 15px; }
+        .header { text-align: center; margin-bottom: 5px; }
         .header h1 {
-          font-size: 2.5rem;
+          font-size: 2rem;
           color: #2d3436;
-          text-shadow: 3px 3px 0 #fff;
-          margin-bottom: 10px;
+          text-shadow: 2px 2px 0 #fff;
+          margin-bottom: 5px;
         }
         
-        .stars-bar { display: flex; justify-content: center; gap: 3px; font-size: 1.5rem; }
+        .stars-bar { display: flex; justify-content: center; gap: 2px; font-size: 1.2rem; }
         .star-slot.earned { animation: pop 0.5s ease; }
         .star-slot:not(.earned) { opacity: 0.3; }
         @keyframes pop {
           50% { transform: scale(1.5); }
         }
         
-        .mascot { text-align: center; margin-bottom: 15px; }
-        .mascot-emoji { font-size: 5rem; }
+        .mascot { text-align: center; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .mascot-emoji { font-size: 3.5rem; }
         .mascot.bounce .mascot-emoji { animation: bounce 1s ease infinite; }
         .mascot.celebrating .mascot-emoji { animation: spin 0.5s ease; }
         @keyframes bounce {
-          50% { transform: translateY(-15px); }
+          50% { transform: translateY(-10px); }
         }
         @keyframes spin {
           50% { transform: rotate(180deg) scale(1.2); }
@@ -360,9 +362,9 @@ export default function Home() {
         .speech-bubble {
           display: inline-block;
           background: white;
-          border-radius: 20px;
-          padding: 10px 20px;
-          font-size: 1.2rem;
+          border-radius: 15px;
+          padding: 8px 15px;
+          font-size: 1rem;
           font-weight: bold;
           color: #2d3436;
           box-shadow: 0 3px 10px rgba(0,0,0,0.1);
@@ -372,8 +374,9 @@ export default function Home() {
         .game-area {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 20px;
+          gap: 15px;
+          flex: 1;
+          min-height: 0;
         }
         @media (max-width: 800px) {
           .game-area {
@@ -383,26 +386,29 @@ export default function Home() {
         
         .sign-card {
           background: white;
-          border-radius: 25px;
-          padding: 20px;
+          border-radius: 20px;
+          padding: 15px;
           box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
         }
         .sign-header {
           display: flex;
           align-items: center;
-          gap: 15px;
-          margin-bottom: 10px;
+          gap: 10px;
+          margin-bottom: 5px;
         }
-        .sign-emoji-big { font-size: 4rem; }
-        .sign-word { font-size: 2rem; color: #e17055; }
-        .sign-desc { font-size: 1rem; color: #636e72; margin-bottom: 15px; }
+        .sign-emoji-big { font-size: 2.5rem; }
+        .sign-word { font-size: 1.5rem; color: #e17055; }
+        .sign-desc { font-size: 0.9rem; color: #636e72; margin-bottom: 10px; }
         
         .video-container {
+          flex: 1;
           position: relative;
-          width: 100%;
-          padding-bottom: 56.25%;
-          border-radius: 15px;
+          border-radius: 12px;
           overflow: hidden;
+          min-height: 0;
         }
         .video-container iframe {
           position: absolute;
@@ -414,24 +420,27 @@ export default function Home() {
         /* Webcam */
         .webcam-container {
           background: white;
-          border-radius: 25px;
-          padding: 20px;
+          border-radius: 20px;
+          padding: 15px;
           box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
         }
         .webcam-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 15px;
-          font-size: 1.3rem;
+          margin-bottom: 10px;
+          font-size: 1.1rem;
           font-weight: bold;
         }
         .cam-btn {
           font-family: inherit;
-          font-size: 1rem;
-          padding: 8px 16px;
+          font-size: 0.9rem;
+          padding: 6px 12px;
           border: none;
-          border-radius: 20px;
+          border-radius: 15px;
           cursor: pointer;
           font-weight: bold;
         }
@@ -441,42 +450,44 @@ export default function Home() {
         
         .webcam-view {
           background: #2d3436;
-          border-radius: 15px;
-          aspect-ratio: 4/3;
+          border-radius: 12px;
+          flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
+          min-height: 0;
         }
         .webcam-view video {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          border-radius: 15px;
+          border-radius: 12px;
         }
         .webcam-placeholder, .webcam-error {
           color: white;
           text-align: center;
-          padding: 20px;
+          padding: 15px;
         }
         .webcam-placeholder span, .webcam-error span {
-          font-size: 4rem;
+          font-size: 3rem;
           display: block;
-          margin-bottom: 10px;
+          margin-bottom: 8px;
         }
         .webcam-status {
-          margin-top: 10px;
+          margin-top: 8px;
           text-align: center;
           font-weight: bold;
           color: #00b894;
+          font-size: 0.9rem;
         }
         .status-dot {
           display: inline-block;
-          width: 10px;
-          height: 10px;
+          width: 8px;
+          height: 8px;
           background: #00b894;
           border-radius: 50%;
-          margin-right: 8px;
+          margin-right: 6px;
           animation: pulse 1s ease infinite;
         }
         @keyframes pulse {
@@ -486,34 +497,34 @@ export default function Home() {
         .progress-section {
           display: flex;
           align-items: center;
-          gap: 15px;
-          margin-bottom: 15px;
+          gap: 10px;
+          margin: 8px 0;
         }
         .progress-bar-container {
           flex: 1;
-          height: 20px;
+          height: 15px;
           background: rgba(255,255,255,0.5);
-          border-radius: 10px;
+          border-radius: 8px;
           overflow: hidden;
         }
         .progress-bar-fill {
           height: 100%;
           background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
-          border-radius: 10px;
+          border-radius: 8px;
           transition: width 0.5s;
         }
-        .progress-text { font-size: 1.2rem; font-weight: bold; }
+        .progress-text { font-size: 1rem; font-weight: bold; }
         
-        .nav-buttons { display: flex; justify-content: center; gap: 20px; }
+        .nav-buttons { display: flex; justify-content: center; gap: 15px; padding-bottom: 5px; }
         .nav-btn {
           font-family: inherit;
-          font-size: 1.3rem;
+          font-size: 1.1rem;
           font-weight: bold;
-          padding: 12px 30px;
+          padding: 10px 25px;
           border: none;
           border-radius: 50px;
           cursor: pointer;
-          box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
           transition: transform 0.2s;
         }
         .nav-btn.prev { background: #74b9ff; color: white; }
