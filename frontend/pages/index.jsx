@@ -94,19 +94,16 @@ function FloatingStars() {
   );
 }
 
-// Composant Webcam avec détection automatique
+// Composant Webcam simple avec timer
 function WebcamView({ onSuccess, disabled, autoStart }) {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const handsRef = useRef(null);
-  const animFrameRef = useRef(null);
   const [error, setError] = useState(null);
-  const [status, setStatus] = useState('idle'); // idle, loading, active
-  const [handDetected, setHandDetected] = useState(false);
+  const [status, setStatus] = useState('idle');
   const [progress, setProgress] = useState(0);
-  const detectionStartRef = useRef(null);
+  const timerRef = useRef(null);
+  const startTimeRef = useRef(null);
 
-  const DETECTION_DURATION = 3000;
+  const HOLD_DURATION = 4000; // 4 secondes pour valider
 
   const startCamera = async () => {
     if (status !== 'idle') return;
@@ -122,7 +119,7 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play();
           setStatus('active');
-          initMediaPipe();
+          startTimer();
         };
       }
     } catch (err) {
@@ -132,106 +129,28 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
     }
   };
 
-  const initMediaPipe = async () => {
-    try {
-      const { Hands } = await import('@mediapipe/hands');
-      
-      const hands = new Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
-      });
-
-      hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 0,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-
-      hands.onResults(handleResults);
-      handsRef.current = hands;
-      
-      detectLoop();
-    } catch (err) {
-      console.error('MediaPipe error:', err);
-      // Continuer sans MediaPipe - juste afficher la vidéo
-      drawVideoLoop();
-    }
-  };
-
-  const drawVideoLoop = () => {
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (canvas && video && video.readyState >= 2) {
-      const ctx = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.translate(-canvas.width, 0);
-      ctx.drawImage(video, 0, 0);
-      ctx.restore();
-    }
-    animFrameRef.current = requestAnimationFrame(drawVideoLoop);
-  };
-
-  const detectLoop = () => {
-    const video = videoRef.current;
-    if (video && handsRef.current && video.readyState >= 2) {
-      handsRef.current.send({ image: video });
-    }
-    animFrameRef.current = requestAnimationFrame(detectLoop);
-  };
-
-  const handleResults = (results) => {
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (!canvas || !video || video.readyState < 2) return;
-
-    const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    // Dessiner vidéo miroir
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.translate(-canvas.width, 0);
-    ctx.drawImage(video, 0, 0);
-    ctx.restore();
-
-    const hasHands = results.multiHandLandmarks?.length > 0;
-    setHandDetected(hasHands);
-
-    if (hasHands) {
-      // Dessiner les points verts sur les mains
-      results.multiHandLandmarks.forEach(landmarks => {
-        landmarks.forEach(point => {
-          const x = canvas.width - (point.x * canvas.width);
-          const y = point.y * canvas.height;
-          ctx.beginPath();
-          ctx.arc(x, y, 8, 0, 2 * Math.PI);
-          ctx.fillStyle = '#00ff00';
-          ctx.fill();
-        });
-      });
-
-      if (!disabled) {
-        if (!detectionStartRef.current) {
-          detectionStartRef.current = Date.now();
-        }
-        const elapsed = Date.now() - detectionStartRef.current;
-        const prog = Math.min(100, (elapsed / DETECTION_DURATION) * 100);
-        setProgress(prog);
-
-        if (elapsed >= DETECTION_DURATION) {
-          detectionStartRef.current = null;
-          setProgress(0);
-          onSuccess?.();
-        }
+  const startTimer = () => {
+    startTimeRef.current = Date.now();
+    const tick = () => {
+      if (disabled) {
+        setProgress(0);
+        startTimeRef.current = null;
+        return;
       }
-    } else {
-      detectionStartRef.current = null;
-      setProgress(0);
-    }
+      
+      const elapsed = Date.now() - startTimeRef.current;
+      const prog = Math.min(100, (elapsed / HOLD_DURATION) * 100);
+      setProgress(prog);
+      
+      if (elapsed >= HOLD_DURATION) {
+        setProgress(0);
+        startTimeRef.current = null;
+        onSuccess?.();
+      } else {
+        timerRef.current = requestAnimationFrame(tick);
+      }
+    };
+    timerRef.current = requestAnimationFrame(tick);
   };
 
   // Auto-start
@@ -244,14 +163,18 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
 
   // Reset quand disabled change
   useEffect(() => {
-    detectionStartRef.current = null;
-    setProgress(0);
+    if (disabled) {
+      setProgress(0);
+      startTimeRef.current = null;
+    } else if (status === 'active' && !startTimeRef.current) {
+      startTimer();
+    }
   }, [disabled]);
 
   // Cleanup
   useEffect(() => {
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (timerRef.current) cancelAnimationFrame(timerRef.current);
       if (videoRef.current?.srcObject) {
         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
@@ -261,7 +184,7 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
   return (
     <div className="webcam-container">
       <div className="webcam-header">
-        <span>{handDetected ? '✋ Super!' : '📷 Caméra'}</span>
+        <span>📷 Caméra</span>
       </div>
       
       <div className="webcam-view">
@@ -272,16 +195,21 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
         ) : status === 'idle' ? (
           <div className="webcam-msg"><span>📷</span><p>Démarrage...</p></div>
         ) : null}
-        <video ref={videoRef} playsInline muted style={{ display: 'none' }} />
-        <canvas ref={canvasRef} className="webcam-canvas" style={{ display: status === 'active' ? 'block' : 'none' }} />
+        <video 
+          ref={videoRef} 
+          playsInline 
+          muted 
+          className="webcam-video"
+          style={{ display: status === 'active' ? 'block' : 'none' }} 
+        />
       </div>
       
-      {status === 'active' && (
+      {status === 'active' && !disabled && (
         <div className="detection-progress">
           <div className="detection-bar">
             <div className="detection-fill" style={{ width: `${progress}%` }} />
           </div>
-          <span>{progress > 0 ? '👏 Continue!' : '👋 Montre tes mains!'}</span>
+          <span>👋 Fais le signe pendant {Math.ceil((HOLD_DURATION - (progress * HOLD_DURATION / 100)) / 1000)}s!</span>
         </div>
       )}
     </div>
@@ -700,10 +628,12 @@ const styles = `
     overflow: hidden;
     min-height: 0;
   }
-  .webcam-canvas {
+  .webcam-video {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transform: scaleX(-1);
+    border-radius: 12px;
   }
   .webcam-msg {
     position: absolute;
