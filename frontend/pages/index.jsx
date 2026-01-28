@@ -103,7 +103,7 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
 
-  const HOLD_DURATION = 4000; // 4 secondes pour valider
+  const HOLD_DURATION = 8000; // 8 secondes pour valider
 
   const startCamera = async () => {
     if (status !== 'idle') return;
@@ -130,27 +130,32 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
   };
 
   const startTimer = () => {
-    startTimeRef.current = Date.now();
-    const tick = () => {
-      if (disabled) {
-        setProgress(0);
-        startTimeRef.current = null;
-        return;
-      }
-      
-      const elapsed = Date.now() - startTimeRef.current;
-      const prog = Math.min(100, (elapsed / HOLD_DURATION) * 100);
-      setProgress(prog);
-      
-      if (elapsed >= HOLD_DURATION) {
-        setProgress(0);
-        startTimeRef.current = null;
-        onSuccess?.();
-      } else {
-        timerRef.current = requestAnimationFrame(tick);
-      }
-    };
-    timerRef.current = requestAnimationFrame(tick);
+    // Attendre 5 secondes avant de commencer le timer (temps de regarder la vidéo)
+    setTimeout(() => {
+      if (disabled) return;
+      startTimeRef.current = Date.now();
+      tick();
+    }, 5000);
+  };
+
+  const tick = () => {
+    if (disabled || !startTimeRef.current) {
+      setProgress(0);
+      startTimeRef.current = null;
+      return;
+    }
+    
+    const elapsed = Date.now() - startTimeRef.current;
+    const prog = Math.min(100, (elapsed / HOLD_DURATION) * 100);
+    setProgress(prog);
+    
+    if (elapsed >= HOLD_DURATION) {
+      setProgress(0);
+      startTimeRef.current = null;
+      onSuccess?.();
+    } else {
+      timerRef.current = requestAnimationFrame(tick);
+    }
   };
 
   // Auto-start
@@ -209,7 +214,7 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
           <div className="detection-bar">
             <div className="detection-fill" style={{ width: `${progress}%` }} />
           </div>
-          <span>👋 Fais le signe pendant {Math.ceil((HOLD_DURATION - (progress * HOLD_DURATION / 100)) / 1000)}s!</span>
+          <span>{progress === 0 ? '👀 Regarde la vidéo...' : `👋 Continue! ${Math.ceil((HOLD_DURATION - (progress * HOLD_DURATION / 100)) / 1000)}s`}</span>
         </div>
       )}
     </div>
