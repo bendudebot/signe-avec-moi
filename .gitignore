@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build
+.next/
+out/
+build/
+dist/
+*.egg-info/
+
+# Coverage
+coverage/
+.coverage
+htmlcov/
+
+# Dataset (trop lourd pour git)
+dataset/*.jpg
+dataset/*.mp4
+dataset/**/*.jpg
+dataset/**/*.mp4
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*

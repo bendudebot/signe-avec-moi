@@ -1,0 +1,41 @@
+services:
+  # Frontend React/Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./assets:/app/public/assets
+    environment:
+      - NEXT_PUBLIC_DETECTOR_URL=http://detector:5000
+
+  # Détecteur Python MediaPipe
+  detector:
+    build:
+      context: ./detector
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    devices:
+      - /dev/video0:/dev/video0  # Webcam
+    volumes:
+      - ./dataset:/app/dataset
+    environment:
+      - DISPLAY=${DISPLAY}
+    profiles:
+      - full
+
+  # Dev frontend only
+  dev:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    profiles:
+      - dev
