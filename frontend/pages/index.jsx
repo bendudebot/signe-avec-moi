@@ -91,9 +91,9 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const handsRef = useRef(null);
+  const animFrameRef = useRef(null);
   const [error, setError] = useState(null);
-  const [isActive, setIsActive] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState('idle'); // idle, loading, active
   const [handDetected, setHandDetected] = useState(false);
   const [progress, setProgress] = useState(0);
   const detectionStartRef = useRef(null);
@@ -101,25 +101,27 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
   const DETECTION_DURATION = 3000;
 
   const startCamera = async () => {
-    if (isActive || isLoading) return;
-    setIsLoading(true);
+    if (status !== 'idle') return;
+    setStatus('loading');
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
+        video: { facingMode: 'user', width: 640, height: 480 } 
       });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setIsActive(true);
-        initMediaPipe();
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+          setStatus('active');
+          initMediaPipe();
+        };
       }
     } catch (err) {
       console.error('Camera error:', err);
       setError('Oups! La caméra ne marche pas 😕');
+      setStatus('idle');
     }
-    setIsLoading(false);
   };
 
   const initMediaPipe = async () => {
@@ -140,67 +142,83 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
       hands.onResults(handleResults);
       handsRef.current = hands;
       
-      // Boucle de détection
       detectLoop();
     } catch (err) {
       console.error('MediaPipe error:', err);
+      // Continuer sans MediaPipe - juste afficher la vidéo
+      drawVideoLoop();
     }
   };
 
-  const detectLoop = () => {
-    if (videoRef.current && handsRef.current && videoRef.current.readyState >= 2) {
-      handsRef.current.send({ image: videoRef.current });
+  const drawVideoLoop = () => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (canvas && video && video.readyState >= 2) {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.translate(-canvas.width, 0);
+      ctx.drawImage(video, 0, 0);
+      ctx.restore();
     }
-    requestAnimationFrame(detectLoop);
+    animFrameRef.current = requestAnimationFrame(drawVideoLoop);
+  };
+
+  const detectLoop = () => {
+    const video = videoRef.current;
+    if (video && handsRef.current && video.readyState >= 2) {
+      handsRef.current.send({ image: video });
+    }
+    animFrameRef.current = requestAnimationFrame(detectLoop);
   };
 
   const handleResults = (results) => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
-    if (!canvas || !video) return;
+    if (!canvas || !video || video.readyState < 2) return;
 
     const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     
     // Dessiner vidéo miroir
     ctx.save();
     ctx.scale(-1, 1);
     ctx.translate(-canvas.width, 0);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0);
     ctx.restore();
 
     const hasHands = results.multiHandLandmarks?.length > 0;
     setHandDetected(hasHands);
 
-    if (hasHands && !disabled) {
+    if (hasHands) {
       // Dessiner les points verts sur les mains
       results.multiHandLandmarks.forEach(landmarks => {
         landmarks.forEach(point => {
-          const x = canvas.width - (point.x * canvas.width); // miroir
+          const x = canvas.width - (point.x * canvas.width);
           const y = point.y * canvas.height;
           ctx.beginPath();
           ctx.arc(x, y, 8, 0, 2 * Math.PI);
           ctx.fillStyle = '#00ff00';
           ctx.fill();
-          ctx.strokeStyle = '#009900';
-          ctx.lineWidth = 2;
-          ctx.stroke();
         });
       });
 
-      // Progression
-      if (!detectionStartRef.current) {
-        detectionStartRef.current = Date.now();
-      }
-      const elapsed = Date.now() - detectionStartRef.current;
-      const prog = Math.min(100, (elapsed / DETECTION_DURATION) * 100);
-      setProgress(prog);
+      if (!disabled) {
+        if (!detectionStartRef.current) {
+          detectionStartRef.current = Date.now();
+        }
+        const elapsed = Date.now() - detectionStartRef.current;
+        const prog = Math.min(100, (elapsed / DETECTION_DURATION) * 100);
+        setProgress(prog);
 
-      if (elapsed >= DETECTION_DURATION) {
-        detectionStartRef.current = null;
-        setProgress(0);
-        onSuccess?.();
+        if (elapsed >= DETECTION_DURATION) {
+          detectionStartRef.current = null;
+          setProgress(0);
+          onSuccess?.();
+        }
       }
     } else {
       detectionStartRef.current = null;
@@ -210,16 +228,27 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
 
   // Auto-start
   useEffect(() => {
-    if (autoStart && !isActive && !isLoading) {
-      startCamera();
+    if (autoStart && status === 'idle') {
+      const timer = setTimeout(startCamera, 500);
+      return () => clearTimeout(timer);
     }
-  }, [autoStart]);
+  }, [autoStart, status]);
 
   // Reset quand disabled change
   useEffect(() => {
     detectionStartRef.current = null;
     setProgress(0);
   }, [disabled]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (videoRef.current?.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
 
   return (
     <div className="webcam-container">
@@ -229,24 +258,17 @@ function WebcamView({ onSuccess, disabled, autoStart }) {
       
       <div className="webcam-view">
         {error ? (
-          <div className="webcam-error">
-            <span>😕</span>
-            <p>{error}</p>
-          </div>
-        ) : isLoading ? (
-          <div className="webcam-loading">
-            <span>⏳</span>
-            <p>Chargement...</p>
-          </div>
-        ) : (
-          <>
-            <video ref={videoRef} playsInline muted style={{ display: 'none' }} />
-            <canvas ref={canvasRef} className="webcam-canvas" />
-          </>
-        )}
+          <div className="webcam-msg"><span>😕</span><p>{error}</p></div>
+        ) : status === 'loading' ? (
+          <div className="webcam-msg"><span>⏳</span><p>Chargement...</p></div>
+        ) : status === 'idle' ? (
+          <div className="webcam-msg"><span>📷</span><p>Démarrage...</p></div>
+        ) : null}
+        <video ref={videoRef} playsInline muted style={{ display: 'none' }} />
+        <canvas ref={canvasRef} className="webcam-canvas" style={{ display: status === 'active' ? 'block' : 'none' }} />
       </div>
       
-      {isActive && (
+      {status === 'active' && (
         <div className="detection-progress">
           <div className="detection-bar">
             <div className="detection-fill" style={{ width: `${progress}%` }} />
@@ -299,10 +321,10 @@ function SignCard({ sign }) {
       {sign.youtubeId && (
         <div className="video-container">
           <iframe
-            src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=1&mute=1&loop=1&playlist=${sign.youtubeId}&rel=0&modestbranding=1`}
+            src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=1&loop=1&playlist=${sign.youtubeId}&rel=0&modestbranding=1`}
             title={`Signe: ${sign.word}`}
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
           />
         </div>
@@ -639,11 +661,12 @@ const styles = `
     height: 100%;
     object-fit: cover;
   }
-  .webcam-loading, .webcam-error {
+  .webcam-msg {
+    position: absolute;
     color: white;
     text-align: center;
   }
-  .webcam-loading span, .webcam-error span {
+  .webcam-msg span {
     font-size: 3rem;
     display: block;
     margin-bottom: 10px;
