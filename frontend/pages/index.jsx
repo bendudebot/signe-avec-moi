@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { SIGNS } from '../data/signs';
 
-// Composant étoiles flottantes (rendu côté client seulement)
+// Composant étoiles flottantes
 function FloatingStars() {
   const [stars, setStars] = useState([]);
   
   useEffect(() => {
-    // Générer les étoiles côté client seulement
     const emojis = ['⭐', '🌟', '✨', '💫'];
     const generated = [...Array(15)].map((_, i) => ({
       id: i,
@@ -40,6 +39,87 @@ function FloatingStars() {
   );
 }
 
+// Composant Webcam
+function WebcamView({ onReady }) {
+  const videoRef = useRef(null);
+  const [error, setError] = useState(null);
+  const [isActive, setIsActive] = useState(false);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: 640, height: 480 } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setIsActive(true);
+        onReady?.(true);
+      }
+    } catch (err) {
+      console.error('Camera error:', err);
+      setError('Impossible d\'accéder à la caméra');
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+      setIsActive(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
+  return (
+    <div className="webcam-container">
+      <div className="webcam-header">
+        <span>📷 Ta caméra</span>
+        {!isActive ? (
+          <button onClick={startCamera} className="cam-btn start">
+            ▶️ Activer
+          </button>
+        ) : (
+          <button onClick={stopCamera} className="cam-btn stop">
+            ⏹️ Arrêter
+          </button>
+        )}
+      </div>
+      
+      <div className="webcam-view">
+        {error ? (
+          <div className="webcam-error">
+            <span>😕</span>
+            <p>{error}</p>
+          </div>
+        ) : !isActive ? (
+          <div className="webcam-placeholder">
+            <span>🎥</span>
+            <p>Clique sur "Activer" pour te voir!</p>
+          </div>
+        ) : (
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted
+            style={{ transform: 'scaleX(-1)' }}
+          />
+        )}
+      </div>
+      
+      {isActive && (
+        <div className="webcam-status">
+          <span className="status-dot"></span>
+          Montre le signe! 👋
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Personnage animé
 function Mascot({ celebrating }) {
   const [mascot, setMascot] = useState('🦊');
@@ -53,7 +133,7 @@ function Mascot({ celebrating }) {
     <div className={`mascot ${celebrating ? 'celebrating' : 'bounce'}`}>
       <div className="mascot-emoji">{mascot}</div>
       <div className="speech-bubble">
-        {celebrating ? '🎉 BRAVO! 🎉' : 'Fais comme moi!'}
+        {celebrating ? '🎉 BRAVO! 🎉' : 'Regarde et imite!'}
       </div>
     </div>
   );
@@ -63,14 +143,16 @@ function Mascot({ celebrating }) {
 function SignCard({ sign }) {
   return (
     <div className="sign-card">
-      <div className="sign-emoji-big">{sign.emoji}</div>
-      <h2 className="sign-word">{sign.word}</h2>
+      <div className="sign-header">
+        <span className="sign-emoji-big">{sign.emoji}</span>
+        <h2 className="sign-word">{sign.word}</h2>
+      </div>
       <p className="sign-desc">{sign.description}</p>
       
       {sign.youtubeId ? (
         <div className="video-container">
           <iframe
-            src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=0&rel=0`}
+            src={`https://www.youtube.com/embed/${sign.youtubeId}?start=${sign.timestamp || 0}&autoplay=0&rel=0&modestbranding=1`}
             title={`Signe: ${sign.word}`}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -87,15 +169,12 @@ function SignCard({ sign }) {
   );
 }
 
-// Barre d'étoiles collectées
+// Barre d'étoiles
 function StarsBar({ count, max }) {
   return (
     <div className="stars-bar">
       {[...Array(max)].map((_, i) => (
-        <span 
-          key={i} 
-          className={`star-slot ${i < count ? 'earned' : ''}`}
-        >
+        <span key={i} className={`star-slot ${i < count ? 'earned' : ''}`}>
           {i < count ? '⭐' : '☆'}
         </span>
       ))}
@@ -107,18 +186,10 @@ function StarsBar({ count, max }) {
 function NavButtons({ onPrev, onNext, canPrev, canNext }) {
   return (
     <div className="nav-buttons">
-      <button 
-        onClick={onPrev} 
-        disabled={!canPrev}
-        className="nav-btn prev"
-      >
+      <button onClick={onPrev} disabled={!canPrev} className="nav-btn prev">
         ◀️ Avant
       </button>
-      <button 
-        onClick={onNext}
-        disabled={!canNext}
-        className="nav-btn next"
-      >
+      <button onClick={onNext} disabled={!canNext} className="nav-btn next">
         Suivant ▶️
       </button>
     </div>
@@ -167,6 +238,7 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [stars, setStars] = useState(0);
   const [celebrating, setCelebrating] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const currentSign = SIGNS[currentIndex];
 
@@ -199,9 +271,11 @@ export default function Home() {
           <StarsBar count={stars} max={SIGNS.length} />
         </header>
 
-        <div className="content">
-          <Mascot celebrating={celebrating} />
+        <Mascot celebrating={celebrating} />
+
+        <div className="game-area">
           <SignCard sign={currentSign} />
+          <WebcamView onReady={setCameraReady} />
         </div>
 
         <div className="progress-section">
@@ -233,11 +307,10 @@ export default function Home() {
         }
         
         .game {
-          max-width: 900px;
+          max-width: 1200px;
           margin: 0 auto;
           padding: 20px;
           min-height: 100vh;
-          position: relative;
         }
         
         .floating-stars {
@@ -258,146 +331,194 @@ export default function Home() {
           100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
         }
         
-        .header { text-align: center; margin-bottom: 20px; }
+        .header { text-align: center; margin-bottom: 15px; }
         .header h1 {
-          font-size: 3rem;
+          font-size: 2.5rem;
           color: #2d3436;
-          text-shadow: 3px 3px 0 #fff, -1px -1px 0 #fff;
-          margin-bottom: 15px;
+          text-shadow: 3px 3px 0 #fff;
+          margin-bottom: 10px;
         }
         
-        .stars-bar { display: flex; justify-content: center; gap: 5px; font-size: 2rem; }
-        .star-slot { transition: transform 0.3s; }
+        .stars-bar { display: flex; justify-content: center; gap: 3px; font-size: 1.5rem; }
         .star-slot.earned { animation: pop 0.5s ease; }
         .star-slot:not(.earned) { opacity: 0.3; }
         @keyframes pop {
-          0% { transform: scale(1); }
           50% { transform: scale(1.5); }
-          100% { transform: scale(1); }
         }
         
-        .content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 30px;
-        }
-        
-        .mascot { text-align: center; }
-        .mascot-emoji { font-size: 8rem; }
+        .mascot { text-align: center; margin-bottom: 15px; }
+        .mascot-emoji { font-size: 5rem; }
         .mascot.bounce .mascot-emoji { animation: bounce 1s ease infinite; }
         .mascot.celebrating .mascot-emoji { animation: spin 0.5s ease; }
         @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-20px); }
+          50% { transform: translateY(-15px); }
         }
         @keyframes spin {
-          0% { transform: rotate(0deg) scale(1); }
           50% { transform: rotate(180deg) scale(1.2); }
-          100% { transform: rotate(360deg) scale(1); }
+          100% { transform: rotate(360deg); }
         }
         .speech-bubble {
+          display: inline-block;
           background: white;
           border-radius: 20px;
-          padding: 15px 25px;
-          font-size: 1.5rem;
+          padding: 10px 20px;
+          font-size: 1.2rem;
           font-weight: bold;
           color: #2d3436;
-          box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-          position: relative;
-          margin-top: 10px;
+          box-shadow: 0 3px 10px rgba(0,0,0,0.1);
         }
-        .speech-bubble::before {
-          content: '';
-          position: absolute;
-          top: -20px;
-          left: 50%;
-          transform: translateX(-50%);
-          border: 10px solid transparent;
-          border-bottom-color: white;
+        
+        /* Zone de jeu côte à côte */
+        .game-area {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+        @media (max-width: 800px) {
+          .game-area {
+            grid-template-columns: 1fr;
+          }
         }
         
         .sign-card {
           background: white;
-          border-radius: 30px;
-          padding: 30px 40px;
-          text-align: center;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-          max-width: 400px;
-          width: 100%;
-        }
-        .sign-card.wiggle { animation: wiggle 3s ease-in-out infinite; }
-        @keyframes wiggle {
-          0%, 100% { transform: rotate(-1deg); }
-          50% { transform: rotate(1deg); }
-        }
-        .sign-emoji-big { font-size: 6rem; margin-bottom: 10px; }
-        .sign-word { font-size: 3rem; color: #e17055; margin-bottom: 10px; }
-        .sign-desc { font-size: 1.2rem; color: #636e72; margin-bottom: 20px; }
-        .video-container {
-          position: relative;
-          width: 100%;
-          padding-bottom: 56.25%; /* 16:9 */
-          border-radius: 15px;
-          overflow: hidden;
-          box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        .video-container iframe {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          border-radius: 15px;
-        }
-        .video-placeholder {
-          background: #dfe6e9;
-          border-radius: 15px;
+          border-radius: 25px;
           padding: 20px;
-          color: #636e72;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.15);
         }
-        .video-placeholder span { font-size: 3rem; }
-        
-        .progress-section {
-          margin: 30px 0;
+        .sign-header {
           display: flex;
           align-items: center;
           gap: 15px;
+          margin-bottom: 10px;
+        }
+        .sign-emoji-big { font-size: 4rem; }
+        .sign-word { font-size: 2rem; color: #e17055; }
+        .sign-desc { font-size: 1rem; color: #636e72; margin-bottom: 15px; }
+        
+        .video-container {
+          position: relative;
+          width: 100%;
+          padding-bottom: 56.25%;
+          border-radius: 15px;
+          overflow: hidden;
+        }
+        .video-container iframe {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+        }
+        
+        /* Webcam */
+        .webcam-container {
+          background: white;
+          border-radius: 25px;
+          padding: 20px;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+        .webcam-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
+          font-size: 1.3rem;
+          font-weight: bold;
+        }
+        .cam-btn {
+          font-family: inherit;
+          font-size: 1rem;
+          padding: 8px 16px;
+          border: none;
+          border-radius: 20px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .cam-btn.start { background: #00b894; color: white; }
+        .cam-btn.stop { background: #d63031; color: white; }
+        .cam-btn:hover { transform: scale(1.05); }
+        
+        .webcam-view {
+          background: #2d3436;
+          border-radius: 15px;
+          aspect-ratio: 4/3;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        .webcam-view video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 15px;
+        }
+        .webcam-placeholder, .webcam-error {
+          color: white;
+          text-align: center;
+          padding: 20px;
+        }
+        .webcam-placeholder span, .webcam-error span {
+          font-size: 4rem;
+          display: block;
+          margin-bottom: 10px;
+        }
+        .webcam-status {
+          margin-top: 10px;
+          text-align: center;
+          font-weight: bold;
+          color: #00b894;
+        }
+        .status-dot {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          background: #00b894;
+          border-radius: 50%;
+          margin-right: 8px;
+          animation: pulse 1s ease infinite;
+        }
+        @keyframes pulse {
+          50% { opacity: 0.5; }
+        }
+        
+        .progress-section {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          margin-bottom: 15px;
         }
         .progress-bar-container {
           flex: 1;
-          height: 25px;
+          height: 20px;
           background: rgba(255,255,255,0.5);
-          border-radius: 15px;
+          border-radius: 10px;
           overflow: hidden;
-          box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
         }
         .progress-bar-fill {
           height: 100%;
           background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
-          border-radius: 15px;
-          transition: width 0.5s ease;
+          border-radius: 10px;
+          transition: width 0.5s;
         }
-        .progress-text { font-size: 1.5rem; font-weight: bold; color: #2d3436; }
+        .progress-text { font-size: 1.2rem; font-weight: bold; }
         
         .nav-buttons { display: flex; justify-content: center; gap: 20px; }
         .nav-btn {
           font-family: inherit;
-          font-size: 1.5rem;
+          font-size: 1.3rem;
           font-weight: bold;
-          padding: 15px 40px;
+          padding: 12px 30px;
           border: none;
           border-radius: 50px;
           cursor: pointer;
-          transition: transform 0.2s, box-shadow 0.2s;
           box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+          transition: transform 0.2s;
         }
         .nav-btn.prev { background: #74b9ff; color: white; }
         .nav-btn.next { background: #ff6b6b; color: white; }
-        .nav-btn:hover:not(:disabled) {
-          transform: scale(1.05);
-          box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
+        .nav-btn:hover:not(:disabled) { transform: scale(1.05); }
         .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .confetti-container {
@@ -414,7 +535,6 @@ export default function Home() {
           animation: confetti-fall 3s ease-out forwards;
         }
         @keyframes confetti-fall {
-          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
           100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
         }
       `}</style>
