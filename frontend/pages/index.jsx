@@ -289,12 +289,22 @@ export default function Home() {
     if (currentIndex > 0) setCurrentIndex(i => i - 1);
   };
 
+  const handleSuccess = () => {
+    // L'enfant a réussi le signe!
+    setStars(s => Math.min(s + 1, SIGNS.length));
+    setCelebrating(true);
+    setTimeout(() => {
+      setCelebrating(false);
+      // Passer au suivant automatiquement
+      if (currentIndex < SIGNS.length - 1) {
+        setCurrentIndex(i => i + 1);
+      }
+    }, 2500);
+  };
+
   const handleNext = () => {
     if (currentIndex < SIGNS.length - 1) {
       setCurrentIndex(i => i + 1);
-      setStars(s => Math.min(s + 1, SIGNS.length));
-      setCelebrating(true);
-      setTimeout(() => setCelebrating(false), 2000);
     }
   };
 
@@ -318,7 +328,16 @@ export default function Home() {
 
         <div className="game-area">
           <SignCard sign={currentSign} />
-          <WebcamView onReady={setCameraReady} />
+          <div className="webcam-section">
+            <WebcamView onReady={setCameraReady} />
+            <button 
+              className="success-btn"
+              onClick={handleSuccess}
+              disabled={celebrating}
+            >
+              ✅ J'ai fait!
+            </button>
+          </div>
         </div>
 
         <div className="progress-section">
@@ -472,6 +491,37 @@ export default function Home() {
           height: 100%;
         }
         
+        /* Webcam section */
+        .webcam-section {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .success-btn {
+          font-family: inherit;
+          font-size: 1.5rem;
+          font-weight: bold;
+          padding: 15px 30px;
+          background: linear-gradient(135deg, #00b894, #00cec9);
+          color: white;
+          border: none;
+          border-radius: 50px;
+          cursor: pointer;
+          box-shadow: 0 6px 20px rgba(0,184,148,0.4);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .success-btn:hover:not(:disabled) {
+          transform: scale(1.05);
+          box-shadow: 0 8px 25px rgba(0,184,148,0.5);
+        }
+        .success-btn:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        .success-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        
         /* Webcam */
         .webcam-container {
           background: white;
@@ -481,6 +531,7 @@ export default function Home() {
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          flex: 1;
         }
         .webcam-header {
           display: flex;
