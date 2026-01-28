@@ -59,11 +59,18 @@ function FloatingStars() {
   );
 }
 
-// Composant Webcam
-function WebcamView({ onReady }) {
+// Composant Webcam avec détection automatique
+function WebcamView({ onSuccess, disabled }) {
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const [error, setError] = useState(null);
   const [isActive, setIsActive] = useState(false);
+  const [handDetected, setHandDetected] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const detectionTimeRef = useRef(0);
+  const animationRef = useRef(null);
+
+  const DETECTION_DURATION = 3000; // 3 secondes pour valider
 
   const startCamera = async () => {
     try {
@@ -73,11 +80,98 @@ function WebcamView({ onReady }) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setIsActive(true);
-        onReady?.(true);
+        startDetection();
       }
     } catch (err) {
       console.error('Camera error:', err);
       setError('Impossible d\'accéder à la caméra');
+    }
+  };
+
+  const startDetection = async () => {
+    // Charger MediaPipe Hands dynamiquement
+    const { Hands } = await import('@mediapipe/hands');
+    const { Camera } = await import('@mediapipe/camera_utils');
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 0,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    let lastDetectionTime = 0;
+
+    hands.onResults((results) => {
+      // Dessiner sur le canvas
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      if (!canvas || !video) return;
+
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.translate(-canvas.width, 0);
+      ctx.drawImage(video, 0, 0);
+      ctx.restore();
+
+      const hasHands = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+      setHandDetected(hasHands);
+
+      if (hasHands && !disabled) {
+        // Dessiner les points de la main
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.translate(-canvas.width, 0);
+        results.multiHandLandmarks.forEach(landmarks => {
+          landmarks.forEach(point => {
+            ctx.beginPath();
+            ctx.arc(point.x * canvas.width, point.y * canvas.height, 6, 0, 2 * Math.PI);
+            ctx.fillStyle = '#00ff00';
+            ctx.fill();
+          });
+        });
+        ctx.restore();
+
+        // Accumuler le temps de détection
+        const now = Date.now();
+        if (lastDetectionTime === 0) lastDetectionTime = now;
+        detectionTimeRef.current += now - lastDetectionTime;
+        lastDetectionTime = now;
+
+        const prog = Math.min(100, (detectionTimeRef.current / DETECTION_DURATION) * 100);
+        setProgress(prog);
+
+        if (detectionTimeRef.current >= DETECTION_DURATION) {
+          // Réussi!
+          detectionTimeRef.current = 0;
+          setProgress(0);
+          onSuccess?.();
+        }
+      } else {
+        // Reset si pas de main
+        detectionTimeRef.current = 0;
+        lastDetectionTime = 0;
+        setProgress(0);
+      }
+    });
+
+    if (videoRef.current) {
+      const camera = new Camera(videoRef.current, {
+        onFrame: async () => {
+          await hands.send({ image: videoRef.current });
+        },
+        width: 640,
+        height: 480
+      });
+      camera.start();
     }
   };
 
@@ -90,20 +184,26 @@ function WebcamView({ onReady }) {
   };
 
   useEffect(() => {
+    // Reset progress quand disabled change (nouveau signe)
+    detectionTimeRef.current = 0;
+    setProgress(0);
+  }, [disabled]);
+
+  useEffect(() => {
     return () => stopCamera();
   }, []);
 
   return (
     <div className="webcam-container">
       <div className="webcam-header">
-        <span>📷 Ta caméra</span>
+        <span>📷 {handDetected ? '✋ Main détectée!' : 'Ta caméra'}</span>
         {!isActive ? (
           <button onClick={startCamera} className="cam-btn start">
             ▶️ Activer
           </button>
         ) : (
           <button onClick={stopCamera} className="cam-btn stop">
-            ⏹️ Arrêter
+            ⏹️ Stop
           </button>
         )}
       </div>
@@ -117,23 +217,22 @@ function WebcamView({ onReady }) {
         ) : !isActive ? (
           <div className="webcam-placeholder">
             <span>🎥</span>
-            <p>Clique sur "Activer" pour te voir!</p>
+            <p>Active la caméra!</p>
           </div>
         ) : (
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted
-            style={{ transform: 'scaleX(-1)' }}
-          />
+          <>
+            <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
+            <canvas ref={canvasRef} className="webcam-canvas" />
+          </>
         )}
       </div>
       
       {isActive && (
-        <div className="webcam-status">
-          <span className="status-dot"></span>
-          Montre le signe! 👋
+        <div className="detection-progress">
+          <div className="detection-bar">
+            <div className="detection-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <span>{progress > 0 ? 'Continue! 👏' : 'Montre le signe! 👋'}</span>
         </div>
       )}
     </div>
@@ -281,7 +380,6 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [stars, setStars] = useState(0);
   const [celebrating, setCelebrating] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
 
   const currentSign = SIGNS[currentIndex];
 
@@ -328,16 +426,7 @@ export default function Home() {
 
         <div className="game-area">
           <SignCard sign={currentSign} />
-          <div className="webcam-section">
-            <WebcamView onReady={setCameraReady} />
-            <button 
-              className="success-btn"
-              onClick={handleSuccess}
-              disabled={celebrating}
-            >
-              ✅ J'ai fait!
-            </button>
-          </div>
+          <WebcamView onSuccess={handleSuccess} disabled={celebrating} />
         </div>
 
         <div className="progress-section">
@@ -491,37 +580,6 @@ export default function Home() {
           height: 100%;
         }
         
-        /* Webcam section */
-        .webcam-section {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .success-btn {
-          font-family: inherit;
-          font-size: 1.5rem;
-          font-weight: bold;
-          padding: 15px 30px;
-          background: linear-gradient(135deg, #00b894, #00cec9);
-          color: white;
-          border: none;
-          border-radius: 50px;
-          cursor: pointer;
-          box-shadow: 0 6px 20px rgba(0,184,148,0.4);
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .success-btn:hover:not(:disabled) {
-          transform: scale(1.05);
-          box-shadow: 0 8px 25px rgba(0,184,148,0.5);
-        }
-        .success-btn:active:not(:disabled) {
-          transform: scale(0.98);
-        }
-        .success-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        
         /* Webcam */
         .webcam-container {
           background: white;
@@ -580,24 +638,30 @@ export default function Home() {
           display: block;
           margin-bottom: 8px;
         }
-        .webcam-status {
+        .webcam-canvas {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 12px;
+        }
+        .detection-progress {
           margin-top: 8px;
           text-align: center;
           font-weight: bold;
-          color: #00b894;
           font-size: 0.9rem;
         }
-        .status-dot {
-          display: inline-block;
-          width: 8px;
-          height: 8px;
-          background: #00b894;
-          border-radius: 50%;
-          margin-right: 6px;
-          animation: pulse 1s ease infinite;
+        .detection-bar {
+          height: 12px;
+          background: #dfe6e9;
+          border-radius: 6px;
+          overflow: hidden;
+          margin-bottom: 5px;
         }
-        @keyframes pulse {
-          50% { opacity: 0.5; }
+        .detection-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #00b894, #00cec9, #0984e3);
+          border-radius: 6px;
+          transition: width 0.1s linear;
         }
         
         .progress-section {
