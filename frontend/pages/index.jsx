@@ -1,6 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { SIGNS } from '../data/signs';
+
+// Fonction pour lire le texte à voix haute
+function speak(text) {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    // Annuler toute lecture en cours
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-CA'; // Français canadien
+    utterance.rate = 0.8; // Un peu plus lent pour les enfants
+    utterance.pitch = 1.1; // Voix légèrement plus aiguë
+    
+    // Trouver une voix française si disponible
+    const voices = window.speechSynthesis.getVoices();
+    const frenchVoice = voices.find(v => v.lang.startsWith('fr'));
+    if (frenchVoice) utterance.voice = frenchVoice;
+    
+    window.speechSynthesis.speak(utterance);
+  }
+}
 
 // Composant étoiles flottantes
 function FloatingStars() {
@@ -128,6 +148,13 @@ function Mascot({ celebrating }) {
     const mascots = ['🦊', '🐰', '🐻', '🦁', '🐨'];
     setMascot(mascots[Math.floor(Math.random() * mascots.length)]);
   }, []);
+
+  // Dire "Bravo!" quand on célèbre
+  useEffect(() => {
+    if (celebrating) {
+      speak('Bravo! Super!');
+    }
+  }, [celebrating]);
   
   return (
     <div className={`mascot ${celebrating ? 'celebrating' : 'bounce'}`}>
@@ -141,11 +168,27 @@ function Mascot({ celebrating }) {
 
 // Carte du signe avec vidéo YouTube
 function SignCard({ sign }) {
+  // Lire le mot quand le signe change
+  useEffect(() => {
+    // Petit délai pour que ce soit plus naturel
+    const timer = setTimeout(() => {
+      speak(sign.word);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [sign.word]);
+
   return (
     <div className="sign-card">
       <div className="sign-header">
         <span className="sign-emoji-big">{sign.emoji}</span>
         <h2 className="sign-word">{sign.word}</h2>
+        <button 
+          className="speak-btn" 
+          onClick={() => speak(sign.word)}
+          title="Écouter"
+        >
+          🔊
+        </button>
       </div>
       <p className="sign-desc">{sign.description}</p>
       
@@ -400,7 +443,19 @@ export default function Home() {
           margin-bottom: 5px;
         }
         .sign-emoji-big { font-size: 2.5rem; }
-        .sign-word { font-size: 1.5rem; color: #e17055; }
+        .sign-word { font-size: 1.5rem; color: #e17055; flex: 1; }
+        .speak-btn {
+          background: #74b9ff;
+          border: none;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          font-size: 1.3rem;
+          cursor: pointer;
+          transition: transform 0.2s;
+        }
+        .speak-btn:hover { transform: scale(1.1); }
+        .speak-btn:active { transform: scale(0.95); }
         .sign-desc { font-size: 0.9rem; color: #636e72; margin-bottom: 10px; }
         
         .video-container {
