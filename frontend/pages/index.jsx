@@ -2,19 +2,27 @@ import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { SIGNS } from '../data/signs';
 
-// Fonction pour lire le texte à voix haute
+// Fonction pour lire le texte à voix haute (retourne une Promise)
 function speak(text) {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'fr-CA';
-    utterance.rate = 0.85;
-    utterance.pitch = 1.1;
-    const voices = window.speechSynthesis.getVoices();
-    const frenchVoice = voices.find(v => v.lang.startsWith('fr'));
-    if (frenchVoice) utterance.voice = frenchVoice;
-    window.speechSynthesis.speak(utterance);
-  }
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'fr-CA';
+      utterance.rate = 0.85;
+      utterance.pitch = 1.1;
+      const voices = window.speechSynthesis.getVoices();
+      const frenchVoice = voices.find(v => v.lang.startsWith('fr'));
+      if (frenchVoice) utterance.voice = frenchVoice;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.speak(utterance);
+      // Timeout de sécurité au cas où onend ne se déclenche pas
+      setTimeout(resolve, 3000);
+    } else {
+      resolve();
+    }
+  });
 }
 
 // Écran d'introduction
@@ -311,17 +319,15 @@ function SignCard({ sign }) {
     // Reset quand le signe change
     setShowVideo(false);
     
-    // D'abord dire le mot
-    setTimeout(() => {
-      speak(sign.word);
-    }, 300);
+    // D'abord dire le mot, puis lancer la vidéo quand c'est fini
+    const startSequence = async () => {
+      await new Promise(r => setTimeout(r, 300)); // Petit délai
+      await speak(sign.word); // Attendre fin du TTS
+      await new Promise(r => setTimeout(r, 300)); // Pause après TTS
+      setShowVideo(true); // Puis lancer la vidéo
+    };
     
-    // Puis lancer la vidéo après 1.5s
-    const timer = setTimeout(() => {
-      setShowVideo(true);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
+    startSequence();
   }, [sign.word]);
 
   return (
